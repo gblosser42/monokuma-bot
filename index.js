@@ -87,7 +87,7 @@ try {
 	
 	var addClue = function (user, parts, mess) {
 		var loc = parts[1];
-		var detail = parts[2];
+		var detail = parts[2].toLowerCase();
 		parts.splice(0,3);
 		var desc = parts.join(' ');
 		if (!clues.notfound[loc]) {
@@ -127,7 +127,7 @@ try {
 	
 	var addDetail = function (parts, mess) {
 		var loc = parts[1];
-		var detail = parts[2];
+		var detail = parts[2].toLowerCase();
 		locations[loc].details.push(detail);
 		mess.reply(`Added ${detail} to ${loc}`);
 		saveLocations();
@@ -135,7 +135,7 @@ try {
 	
 	var removeDetail = function (parts, mess) {
 		var loc = parts[1];
-		var detail = parts[2];
+		var detail = parts[2].toLowerCase();
 		var index = locations[loc].details.indexOf(detail);
 		locations[loc].details.splice(index,1);
 		mess.reply(`Removed ${detail} from ${loc}`);
@@ -153,7 +153,7 @@ try {
 	var search = function (channel, user, parts, mess) {
 		var loc = channel.name;
 		var name = user.username;
-		var detail = parts[1];
+		var detail = parts[1].toLowerCase();
 		var locObj = locations[loc];
 		if (locObj) {
 			if (players.indexOf(name) > -1) {
@@ -166,7 +166,7 @@ try {
 				if (availableClues && availableClues.length > 0) {
 					var clueFound = availableClues.shift();
 					clues.notfound[loc][detail] = availableClues;
-					user.send(clueFound);
+					mess.reply(clueFound);
 					if (!clues.found[name]) {
 						clues.found[name] = [];
 					}
@@ -180,7 +180,7 @@ try {
 					saveClues();
 					savePlayers();
 				} else {
-					user.send(`You didn't find anything unusual at the ${detail}`);
+					mess.reply(`You didn't find anything unusual at the ${detail}`);
 				}
 			}
 		}
@@ -207,10 +207,12 @@ try {
 	}
 	
 	var mainProcess = function () {
-		 mybot = new Discord.Client();
+		 mybot = new Discord.Client({
+		 intents: [Discord.GatewayIntentBits.Guilds,Discord.GatewayIntentBits.GuildMessages,Discord.GatewayIntentBits.DirectMessages,Discord.GatewayIntentBits.MessageContent,Discord.GatewayIntentBits.GuildMembers]
+	 });
 		 mybot.login(config.token);
 
-		 mybot.on('message', async function(mess) {
+		 mybot.on('messageCreate', async function(mess) {
 			var user, channel, message, server;
 			var result;
 			user = mess.author;
@@ -220,8 +222,8 @@ try {
 				server = mess.channel.guild;
 				if (!serverRoles) {
 					serverRoles = await server.roles.fetch();
-					adminId = serverRoles.cache.find(role => role.name === 'Murder Admin').id;
-					activeId = serverRoles.cache.find(role => role.name === 'Murder Player').id;
+					adminId = serverRoles.find(role => role.name === 'Murder Admin').id;
+					activeId = serverRoles.find(role => role.name === 'Murder Player').id;
 				}
 				var roles = await getRoles(user, server);
 				if (message.charAt(0) === '!' && roles.active) {
@@ -267,6 +269,7 @@ try {
 							break;
 						case 'look':
 							if (roles.active) {
+								console.log('ye');
 								look(channel, mess);
 							}
 							break;

@@ -17,6 +17,6 @@
   },
   "homepage": "https://github.com/gblosser42/monokuma-bot#readme",
   "dependencies": {
-    "discord.js": "^12.5.3"
+    "discord.js": "^14.6.0"
   }
 }
