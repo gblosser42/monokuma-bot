@@ -6,6 +6,8 @@ var config;
 var clues;
 var locations;
 var players;
+var emptyLocations;
+var bonusSearch = [];
 
 if (!fs.existsSync('./config.json')) {
 	fs.writeFileSync('./config.json', JSON.stringify({discord:{token:'YOUR TOKEN'}}).replace(/\r?\n|\r/g,''));
@@ -21,6 +23,10 @@ if (!fs.existsSync('./locations.json')) {
 
 if (!fs.existsSync('./players.json')) {
 	fs.writeFileSync('./players.json', '[]');
+}
+
+if (!fs.existsSync('./empty.json')) {
+	fs.writeFileSync('./empty.json', '{}');
 }
 
 var log = function(message, isError) {
@@ -60,6 +66,10 @@ try {
 	
 	var savePlayers = function () {
 		fs.writeFileSync('./players.json', JSON.stringify(players));
+	}
+	
+	var saveEmpty = function () { 
+		fs.writeFileSync('./empty.json', JSON.stringify(emptyLocations));
 	}
 	
 	var listClues = function (user) {
@@ -161,26 +171,41 @@ try {
 			} else if (locObj.details.indexOf(detail) === -1) {
 				mess.reply(`${detail} isn't a valid search detail at this location`);
 			} else {
-				players.push(name);
-				var availableClues = clues.notfound[loc][detail];
-				if (availableClues && availableClues.length > 0) {
-					var clueFound = availableClues.shift();
-					clues.notfound[loc][detail] = availableClues;
-					mess.reply(clueFound);
-					if (!clues.found[name]) {
-						clues.found[name] = [];
+				if (emptyLocations[loc] && emptyLocations[loc][detail]) {
+					mess.reply(`${detail} has already been searched and found to be empty. You can search another location today`);
+				} else {
+					var availableClues = clues.notfound[loc][detail];
+					if (availableClues && availableClues.length > 0) {
+						players.push(name);
+						var clueFound = availableClues.shift();
+						clues.notfound[loc][detail] = availableClues;
+						mess.reply(clueFound);
+						if (!clues.found[name]) {
+							clues.found[name] = [];
+						}
+						clues.found[name].push(
+							{
+								location: loc,
+								detail: detail,
+								description: clueFound
+							}
+						);
+					} else {
+						if (bonusSearch.indexOf(name) > -1) {
+							players.push(name);
+							mess.reply(`You didn't find anything unusual at the ${detail}`);
+						} else {
+							bonusSearch.push(name);
+							mess.reply(`You didn't find anything unusual at the ${detail}. Since this was the first time you didn't find anything today, you can do an additional search.`);
+						}
+						if (!emptyLocations[loc]) {
+							emptyLocations[loc] = {};
+						}
+						emptyLocations[loc][detail]=true;
+						saveEmpty();
 					}
-					clues.found[name].push(
-					{
-						location: loc,
-						detail: detail,
-						description: clueFound
-					}
-					);
 					saveClues();
 					savePlayers();
-				} else {
-					mess.reply(`You didn't find anything unusual at the ${detail}`);
 				}
 			}
 		}
@@ -192,6 +217,7 @@ try {
 	
 	var resetActions = function (mess) {
 		players = [];
+		bonusSearch = [];
 		savePlayers();
 		mess.reply('Reset player actions');
 	}
@@ -303,6 +329,7 @@ try {
 	clues = require('./clues.json');
 	locations = require('./locations.json');
 	players = require('./players.json');
+	emptyLocations = require('./empty.json');
 	config = configFile.discord;
 	if (config.token === 'YOUR TOKEN') {
 		var pw=true;
